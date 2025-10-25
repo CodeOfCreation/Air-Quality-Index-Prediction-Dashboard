@@ -20,7 +20,7 @@ A Django-based web application that predicts Air Quality Index using machine lea
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/CodeOfCreation/Air-Quality-Index-Prediction-Dashboard.git
 cd aqi-prediction-dashboard
 
 steps to compute this project directly
