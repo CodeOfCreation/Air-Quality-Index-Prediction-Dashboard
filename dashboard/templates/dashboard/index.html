@@ -1,0 +1,279 @@
+{% extends 'dashboard/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-primary">Air Quality Index Prediction Dashboard</h1>
+            <p class="lead">
+                Predict air quality using machine learning models based on environmental parameters.
+                This dashboard uses Linear Regression and Decision Tree models to forecast AQI values.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Input Form Section -->
+    <div class="col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h3 class="card-title mb-0"><i class="fas fa-edit"></i> Enter Air Quality Parameters</h3>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        {% for field in form %}
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger small">{{ field.errors }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-calculator"></i> Predict AQI
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Section -->
+    <div class="col-lg-6">
+        {% if lr_prediction is not None and dt_prediction is not None %}
+        <div class="row mb-4">
+            <!-- Linear Regression Card -->
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header text-center" style="background-color: {{ lr_category.color }}; color: white;">
+                        <h4 class="card-title mb-0">Linear Regression</h4>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="aqi-display mb-3">
+                            <h2 class="display-4 fw-bold">{{ lr_prediction|floatformat:1 }}</h2>
+                            <span class="badge {{ lr_category.bg_color }}" style="font-size: 1.2rem;">
+                                {{ lr_category.name }}
+                            </span>
+                        </div>
+                        <p class="card-text text-muted">Model Prediction</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Decision Tree Card -->
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-header text-center" style="background-color: {{ dt_category.color }}; color: white;">
+                        <h4 class="card-title mb-0">Decision Tree</h4>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="aqi-display mb-3">
+                            <h2 class="display-4 fw-bold">{{ dt_prediction|floatformat:1 }}</h2>
+                            <span class="badge {{ dt_category.bg_color }}" style="font-size: 1.2rem;">
+                                {{ dt_category.name }}
+                            </span>
+                        </div>
+                        <p class="card-text text-muted">Model Prediction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comparison Note -->
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> Model Comparison</h5>
+            <p class="mb-0">Difference between models: <strong>{{ difference|floatformat:2 }}</strong></p>
+        </div>
+        {% endif %}
+        
+        <!-- AQI Scale Reference -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="card-title mb-0"><i class="fas fa-ruler"></i> AQI Scale Reference</h4>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>AQI Value</th>
+                            <th>Category</th>
+                            <th>Health Implications</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>0-50</td>
+                            <td><span class="badge bg-success">Good</span></td>
+                            <td>Little or no risk</td>
+                        </tr>
+                        <tr>
+                            <td>51-100</td>
+                            <td><span class="badge bg-warning text-dark">Moderate</span></td>
+                            <td>Acceptable quality</td>
+                        </tr>
+                        <tr>
+                            <td>101-150</td>
+                            <td><span class="badge bg-orange text-white">Unhealthy for Sensitive Groups</span></td>
+                            <td>Some members of sensitive groups may be affected</td>
+                        </tr>
+                        <tr>
+                            <td>151-200</td>
+                            <td><span class="badge bg-danger">Unhealthy</span></td>
+                            <td>Everyone may begin to experience health effects</td>
+                        </tr>
+                        <tr>
+                            <td>201-300</td>
+                            <td><span class="badge bg-purple text-white">Very Unhealthy</span></td>
+                            <td>Health alert: everyone may experience more serious health effects</td>
+                        </tr>
+                        <tr>
+                            <td>301+</td>
+                            <td><span class="badge bg-dark">Hazardous</span></td>
+                            <td>Health warnings of emergency conditions</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart Section -->
+{% if chart_data %}
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0"><i class="fas fa-chart-line"></i> Recent Predictions Comparison</h4>
+            </div>
+            <div class="card-body">
+                <canvas id="aqiChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent History Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4 class="card-title mb-0"><i class="fas fa-history"></i> Recent Predictions</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>PM2.5</th>
+                                <th>PM10</th>
+                                <th>NO2</th>
+                                <th>SO2</th>
+                                <th>CO</th>
+                                <th>O3</th>
+                                <th>Temp</th>
+                                <th>Humidity</th>
+                                <th>LR AQI</th>
+                                <th>DT AQI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for prediction in recent_history %}
+                            <tr>
+                                <td>{{ prediction.timestamp|date:"M d, H:i" }}</td>
+                                <td>{{ prediction.pm25 }}</td>
+                                <td>{{ prediction.pm10 }}</td>
+                                <td>{{ prediction.no2 }}</td>
+                                <td>{{ prediction.so2 }}</td>
+                                <td>{{ prediction.co }}</td>
+                                <td>{{ prediction.o3 }}</td>
+                                <td>{{ prediction.temperature }}</td>
+                                <td>{{ prediction.humidity }}</td>
+                                <td>{{ prediction.lr_prediction|floatformat:1 }}</td>
+                                <td>{{ prediction.dt_prediction|floatformat:1 }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="12" class="text-center">No predictions yet. Make your first prediction!</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize chart if data exists
+    {% if chart_data %}
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('aqiChart').getContext('2d');
+        
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_data.timestamps|safe }},
+                datasets: [
+                    {
+                        label: 'Linear Regression',
+                        data: {{ chart_data.lr_predictions|safe }},
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Decision Tree',
+                        data: {{ chart_data.dt_predictions|safe }},
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'AQI Value'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                }
+            }
+        });
+    });
+    {% endif %}
+</script>
+{% endblock %}
